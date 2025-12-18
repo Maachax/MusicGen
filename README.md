@@ -1,12 +1,12 @@
-# Système de Génération Musicale - Architecture & Fichiers Essentiels
+# Music Generation Engine - Architecture & Core Files
 
-Ce dossier contient l'arborescence complète et les fichiers essentiels pour le système de génération musicale algorithmique. Il exclut volontairement toute la partie graphique/visualisation.
+This directory contains the complete file structure and essential components for an algorithmic music generation system. It deliberately excludes all graphical/visualization components.
 
-## 📁 Structure du Projet
+## 📁 Project Structure
 
 ```
 toKeep/
-├── README.md (ce fichier)
+├── README.md (this file)
 ├── audio/
 │   ├── engine.js
 │   ├── synths.js
@@ -21,35 +21,32 @@ toKeep/
 │   ├── generateConditionalArray.js
 │   └── randomDegreeProgression.js
 └── core/
-    └── musicEngine.js (nouveau fichier orchestrateur)
+    └── musicEngine.js (main orchestrator)
 ```
 
 ---
 
-## 🎵 Description des Modules
+## 🎵 Module Descriptions
 
-### **audio/** - Moteur Audio & Synthétiseurs
+### **audio/** - Audio Engine & Synthesizers
 
 #### `engine.js`
 
-**Responsabilités:**
+**Responsibilities:**
+- Global audio graph configuration (main bus, effects, compression, limiter)
+- Parallel effects management: reverb (short/long), delay, vibrato, chorus, bitcrusher, distortion
+- Dynamic headroom control and limiting
+- Audio metrics (peak meter)
 
-- Configuration du graphe audio global (bus principal, effets, compression, limiteur)
-- Gestion des effets parallèles: reverb (court/long), delay, vibrato, chorus, bitcrusher, distortion
-- Contrôle du headroom dynamique et du limiteur
-- Métriques audio (peak meter)
-- API de contrôle: `setGlobalHeadroom()`, `setReverbDepth()`, `initAudioTransport()`
+**Dependencies:** Tone.js
 
-**Dépendances:** Tone.js
-
-**Exports principaux:**
-
+**Main Exports:**
 ```javascript
 export const audioGraph = {
-  bus,           // Bus principal
-  dryBus,        // Bus dry (avant effets)
-  optional,      // Effets disponibles
-  wet,           // Gains wet pour chaque effet
+  bus,           // Main bus
+  dryBus,        // Dry bus (pre-effects)
+  optional,      // Available effects
+  wet,           // Wet gains per effect
   lowpass, comp, limiter, meter
 }
 export function setGlobalHeadroom(db)
@@ -61,24 +58,21 @@ export function initAudioTransport()
 
 #### `synths.js`
 
-**Responsabilités:**
-
-- Définition de tous les synthétiseurs du système
-- Chaînes de traitement audio personnalisées (filters, gains)
-- Système de proxy pour exposer les synthés + leurs filtres
-- Régénération aléatoire des timbres (`regenerateInstruments()`)
+**Responsibilities:**
+- Definition of all system synthesizers
+- Custom audio processing chains (filters, gains)
+- Proxy system to expose synths + their filters
+- Random timbre regeneration (`regenerateInstruments()`)
 
 **Instruments:**
-
-- `bassLineSynth` - Basse principale (triangle/sine, lowpass 900Hz)
-- `subBassSynth` - Sub-basse (pure sine, lowpass 160Hz)
-- `midLineSynth` - Voix médium douce (lowpass 2000Hz)
-- `midLineSynth2` - Voix médium accent
-- `arpegioSynth` - Arpège mélodique (lowpass 3500Hz)
-- `chordSynth` - Accords polyphoniques (PolySynth)
+- `bassLineSynth` - Main bass (triangle/sine, lowpass 900Hz)
+- `subBassSynth` - Sub-bass (pure sine, lowpass 160Hz)
+- `midLineSynth` - Soft mid voice (lowpass 2000Hz)
+- `midLineSynth2` - Accent mid voice
+- `arpegioSynth` - Melodic arpeggio (lowpass 3500Hz)
+- `chordSynth` - Polyphonic chords (PolySynth)
 
 **Exports:**
-
 ```javascript
 export {
   bassLineSynth,
@@ -96,27 +90,24 @@ export {
 
 #### `parameterDrift.js`
 
-**Responsabilités:**
-
-- Dérive aléatoire lente des paramètres audio (filtres, reverb, delay, vibrato)
-- Scheduling basé sur le transport musical (mesures)
-- Transitions douces (ramp) entre valeurs cibles
-- Système modulaire: ajout de targets dynamiques
+**Responsibilities:**
+- Slow random drift of audio parameters (filters, reverb, delay, vibrato)
+- Transport-based scheduling (measure resolution)
+- Smooth transitions (ramp) between target values
+- Modular system: dynamic target addition
 
 **API:**
-
 ```javascript
 export function createParameterDrift(opts) {
-  // Retourne:
+  // Returns:
   addTarget({ name, getter, apply, range, stepMeasures, rampMeasures }),
-    start(),
-    stop(),
-    dispose();
+  start(),
+  stop(),
+  dispose()
 }
 ```
 
-**Exemple d'utilisation:**
-
+**Example Usage:**
 ```javascript
 const drift = createParameterDrift({ debug: true });
 drift.addTarget({
@@ -134,73 +125,65 @@ drift.start();
 
 #### `randomEffectChain.js`
 
-**Responsabilités:**
-
-- Sélection aléatoire pondérée d'effets pour chaque synthé
-- Évite les doublons et combinaisons problématiques (ex: 2 reverbs simultanées)
-- Registry WeakMap pour tracer les effets déjà attachés
+**Responsibilities:**
+- Weighted random effect selection for each synth
+- Avoids duplicates and problematic combinations (e.g., 2 reverbs simultaneously)
+- WeakMap registry to track attached effects
 
 **Exports:**
-
 ```javascript
 export function pickEffectSubset(max = 2)
 export function attachRandomEffects(synth, { max = 2 })
 ```
 
-**Pool d'effets disponibles:**
-
-- reverb (poids: 3)
-- longReverb (poids: 1)
-- delay (poids: 2)
-- vibrato (poids: 2)
-- chorus (poids: 1)
+**Available Effect Pool:**
+- reverb (weight: 3)
+- longReverb (weight: 1)
+- delay (weight: 2)
+- vibrato (weight: 2)
+- chorus (weight: 1)
 
 ---
 
-### **theory/** - Théorie Musicale
+### **theory/** - Music Theory
 
 #### `randomScale.js`
 
-**Responsabilités:**
-
-- Génération aléatoire de gammes (note + mode)
-- Utilise la librairie Tonal pour les modes
+**Responsibilities:**
+- Random scale generation (note + mode)
+- Uses Tonal library for modes
 
 **Export:**
-
 ```javascript
 export function getRandomScale()
-// Retourne: { randomNote, randomMode }
-// Ex: { randomNote: "C#", randomMode: "dorian" }
+// Returns: { randomNote, randomMode }
+// Example: { randomNote: "C#", randomMode: "dorian" }
 ```
 
-**Notes disponibles:** C, C#, D, D#, E, F, F#, G, G#, A, A#, B
+**Available Notes:** C, C#, D, D#, E, F, F#, G, G#, A, A#, B
 
 ---
 
 #### `chords.js`
 
-**Responsabilités:**
-
-- Génération de progressions d'accords harmoniques
-- Application de cadences fonctionnelles (Tonique-Prédominant-Dominant-Tonique)
-- Construction d'accords 7ème avec voicings
-- Extensions futures possibles: 9èmes, 11èmes, 13èmes
+**Responsibilities:**
+- Harmonic chord progression generation
+- Functional cadence application (Tonic-Predominant-Dominant-Tonic)
+- 7th chord construction with voicings
+- Future extensions possible: 9ths, 11ths, 13ths
 
 **Export:**
-
 ```javascript
 export function getChordProgression(randomNote, randomMode) {
-  // Retourne:
-  chordProgression, // Notes fondamentales [C, F, G, C]
-    seventhChords, // Noms d'accords 7ème
-    degreesProgression, // Degrés [1, 4, 5, 1]
-    seventhChordVoicings; // Voicings complets [[C,E,G,B], ...]
+  // Returns:
+  chordProgression,      // Root notes [C, F, G, C]
+  seventhChords,         // 7th chord names
+  degreesProgression,    // Degrees [1, 4, 5, 1]
+  seventhChordVoicings   // Complete voicings [[C,E,G,B], ...]
 }
 ```
 
-**Logique harmonique:**
-
+**Harmonic Logic:**
 ```javascript
 globalThis.__HARMONIC_FUNC__ = {
   tonic: [1, 3, 6],
@@ -211,97 +194,94 @@ globalThis.__HARMONIC_FUNC__ = {
 
 ---
 
-### **rhythm/** - Rythme & Motifs
+### **rhythm/** - Rhythm & Motifs
 
 #### `generateRhythmicMotif.js`
 
-**Responsabilités:**
-
-- Génération de motifs rythmiques par distribution d'intervalles
-- Mutation contrôlée des motifs (variation subtile)
-- Ajustement de densité dynamique
-- Manager de motifs avec cycles de régénération automatiques
+**Responsibilities:**
+- Rhythmic motif generation via interval distribution
+- Controlled motif mutation (subtle variation)
+- Dynamic density adjustment
+- Motif manager with automatic regeneration cycles
 
 **Exports:**
-
 ```javascript
 export function generateRhythmicMotif(steps, { density, weights, protectStrongBeats })
 export function mutateMotif(motif, { steps, maxTries })
-export function createMotifManager({ steps, density, mutateEvery, regenEvery, mutationProbability, weights })
+export function createMotifManager({ 
+  steps, 
+  density, 
+  mutateEvery, 
+  regenEvery, 
+  mutationProbability, 
+  weights 
+})
 ```
 
-**API MotifManager:**
-
+**MotifManager API:**
 ```javascript
 {
-  current(), // Position actuelle dans le motif
-    advanceStep(beatIndex), // Avance et retourne true si trigger
-    tickExternal(), // Incrémente le cycle
-    getMotif(), // Retourne le motif actuel
-    forceRegenerate(density), // Force nouvelle génération
-    getLastDurationSteps(); // Durée de la dernière note
+  current(),                   // Current position in motif
+  advanceStep(beatIndex),      // Advances and returns true if trigger
+  tickExternal(),              // Increments cycle
+  getMotif(),                  // Returns current motif
+  forceRegenerate(density),    // Forces new generation
+  getLastDurationSteps()       // Duration of last note
 }
 ```
 
-**Poids d'intervalles par défaut:**
-
+**Default Interval Weights:**
 ```javascript
 { 1: 1, 2: 2, 3: 3, 4: 4, 6: 2, 8: 1 }
 ```
 
 ---
 
-### **utils/** - Utilitaires
+### **utils/** - Utilities
 
 #### `generateConditionalArray.js`
 
-**Responsabilités:**
-
-- Génération de séquences basées sur probabilités
-- Deux modes: indices mélodiques et binaire (0/1)
+**Responsibilities:**
+- Probability-based sequence generation
+- Two modes: melodic indices and binary (0/1)
 
 **Exports:**
-
 ```javascript
 export function generateMelodyProbability(size, probability)
-// Retourne: [0, 2, 5, 7, ...] (indices actifs)
+// Returns: [0, 2, 5, 7, ...] (active indices)
 
 export function generateBinaryProbability(size, probability)
-// Retourne: [1, 0, 1, 1, 0, ...] (choix binaires)
+// Returns: [1, 0, 1, 1, 0, ...] (binary choices)
 ```
 
 ---
 
 #### `randomDegreeProgression.js`
 
-**Responsabilités:**
-
-- Génération basique de progression de degrés (1-7)
-- Utilise par `chords.js` puis affinée par cadences fonctionnelles
+**Responsibilities:**
+- Basic degree progression generation (1-7)
+- Used by `chords.js` then refined by functional cadences
 
 **Export:**
-
 ```javascript
 export function randomDegreeProgression()
-// Retourne: [1, 4, 5, 1] (4 degrés aléatoires)
+// Returns: [1, 4, 5, 1] (4 random degrees)
 ```
 
 ---
 
-### **core/** - Orchestration Centrale
+### **core/** - Central Orchestration
 
-#### `musicEngine.js` (NOUVEAU - À CRÉER)
+#### `musicEngine.js`
 
-**Responsabilités:**
+**Responsibilities:**
+- Complete music system initialization
+- Main sequencing loop (Tone.Loop)
+- Global state management (beatIndex, chordIndex, loopIndex)
+- Coordination between instruments, harmony, and rhythm
+- Public API for engine control
 
-- Initialisation complète du système musical
-- Boucle principale de séquençage (Tone.Loop)
-- Gestion du state global (beatIndex, chordIndex, loopIndex)
-- Coordination entre instruments, harmonie et rythme
-- API publique pour contrôler le moteur
-
-**Architecture proposée:**
-
+**Proposed Architecture:**
 ```javascript
 import * as Tone from "tone";
 import { initAudioTransport, audioGraph } from "../audio/engine";
@@ -337,11 +317,11 @@ export function createMusicEngine(config = {}) {
   let chordIndex = 0;
   let loopIndex = 1;
 
-  // Génération initiale
+  // Initial generation
   let { randomNote, randomMode } = getRandomScale();
   let chordsProg = getChordProgression(randomNote, randomMode);
 
-  // Motifs rythmiques
+  // Rhythmic motifs
   const arpegioMotifManager = createMotifManager({
     steps: BASE_MELODY_STEPS * SUBDIV_FACTOR,
     density: 0.4,
@@ -349,12 +329,12 @@ export function createMusicEngine(config = {}) {
     regenEvery: 512,
   });
 
-  // Boucle principale
+  // Main loop
   const mainLoop = new Tone.Loop((time) => {
-    // Logique de séquençage...
+    // Sequencing logic...
   }, "32n");
 
-  // API publique
+  // Public API
   return {
     start() {
       mainLoop.start(0);
@@ -366,22 +346,16 @@ export function createMusicEngine(config = {}) {
     setBpm(bpm) {
       Tone.getTransport().bpm.rampTo(bpm, 0.25);
     },
-    newScale() {
-      /* ... */
-    },
-    toggleInstrument(name) {
-      /* ... */
-    },
-    getState() {
-      /* ... */
-    },
+    newScale() { /* ... */ },
+    toggleInstrument(name) { /* ... */ },
+    getState() { /* ... */ },
   };
 }
 ```
 
 ---
 
-## 🔧 Dépendances Externes
+## 🔧 External Dependencies
 
 ```json
 {
@@ -394,25 +368,28 @@ export function createMusicEngine(config = {}) {
 
 ---
 
-## 🚀 Utilisation Minimale
+## 🚀 Minimal Usage
 
 ```javascript
 import * as Tone from "tone";
 import { createMusicEngine } from "./core/musicEngine";
 
-// Initialisation
+// Initialization
 const engine = createMusicEngine({
   bpm: 95,
   debug: true,
 });
 
-// Démarrage (requiert user gesture)
+// Initialize
+engine.initialize();
+
+// Start (requires user gesture)
 document.body.addEventListener("click", async () => {
   await Tone.start();
   engine.start();
 });
 
-// Contrôles
+// Controls
 engine.setBpm(120);
 engine.newScale();
 engine.toggleInstrument("bass");
@@ -420,46 +397,46 @@ engine.toggleInstrument("bass");
 
 ---
 
-## 🎛️ Configuration Avancée
+## 🎛️ Advanced Configuration
 
-### Constantes principales (à définir dans `musicEngine.js`):
+### Main Constants (define in `musicEngine.js`):
 
 ```javascript
-const BASE_MELODY_STEPS = 16; // Grille de base (16e notes)
-const SUBDIV_FACTOR = 2; // Subdivision (32e notes)
-const MELODY_LENGTH = 32; // Résolution totale
-const MID_LENGTH = 8; // Grille midline
+const BASE_MELODY_STEPS = 16;      // Base grid (16th notes)
+const SUBDIV_FACTOR = 2;           // Subdivision (32nd notes)
+const MELODY_LENGTH = 32;          // Total resolution
+const MID_LENGTH = 8;              // Midline grid
 
-const CHORD_INTERVAL = 32; // Changement d'accord (ticks)
-const MUTATE_INTERVAL = 128; // Mutation patterns
-const PROG_INTERVAL = 512; // Nouvelle progression
+const CHORD_INTERVAL = 32;         // Chord change (ticks)
+const MUTATE_INTERVAL = 128;       // Pattern mutation
+const PROG_INTERVAL = 512;         // New progression
 
-const HUMANIZE_MIN_MS = 5; // Micro-timing min
-const HUMANIZE_MAX_MS = 35; // Micro-timing max
+const HUMANIZE_MIN_MS = 5;         // Min micro-timing (ms)
+const HUMANIZE_MAX_MS = 35;        // Max micro-timing (ms)
 ```
 
-### Humanisation:
+### Humanization:
 
 ```javascript
 function humanize(time) {
   if (!humanizeEnabled) return time;
   const r = Math.random() * 2 - 1;
-  const mag =
-    HUMANIZE_MIN_MS + (HUMANIZE_MAX_MS - HUMANIZE_MIN_MS) * Math.random() ** 2;
+  const mag = HUMANIZE_MIN_MS + 
+    (HUMANIZE_MAX_MS - HUMANIZE_MIN_MS) * Math.random() ** 2;
   return time + (r * mag) / 1000;
 }
 ```
 
 ---
 
-## 📊 Flux de Données
+## 📊 Data Flow
 
 ```
 getRandomScale()
     ↓
 getChordProgression(note, mode)
     ↓
-seventhChordVoicings → melodyNotes (pool de notes)
+seventhChordVoicings → melodyNotes (note pool)
     ↓
 generateRhythmicMotif() → arpegioMotifManager
     ↓
@@ -469,73 +446,69 @@ mainLoop (Tone.Loop @ 32n)
 ├─ midLineSynth.triggerAttackRelease()
 └─ arpegioSynth.triggerAttackRelease()
     ↓
-audioGraph (bus → effets → comp → limiter → destination)
+audioGraph (bus → effects → comp → limiter → destination)
 ```
 
 ---
 
-## 🔄 Cycles de Régénération
+## 🔄 Regeneration Cycles
 
-| Élément                | Intervalle   | Effet                      |
-| ---------------------- | ------------ | -------------------------- |
-| Accord                 | 32 ticks     | Change l'accord courant    |
-| Mutation motif arp     | 128 ticks    | Petite variation rythmique |
-| Mutation midline       | 128 ticks    | Nouvelles probabilités     |
-| Progression harmonique | 512 ticks    | Nouvelle suite d'accords   |
-| Dérive paramètres      | 8-32 mesures | Filtres, reverb, etc.      |
+| Element              | Interval     | Effect                      |
+|---------------------|-------------|----------------------------|
+| Chord               | 32 ticks    | Changes current chord       |
+| Arp motif mutation  | 128 ticks   | Small rhythmic variation    |
+| Midline mutation    | 128 ticks   | New probabilities          |
+| Harmonic progression| 512 ticks   | New chord sequence         |
+| Parameter drift     | 8-32 measures| Filters, reverb, etc.     |
 
 ---
 
-## 🎨 Points d'Extension Futurs
+## 🎨 Future Extension Points
 
-1. **Génération mélodique avancée:**
+1. **Advanced Melody Generation:**
+   - Markov chains for melodic contours
+   - Interval constraints (no jumps > 7 semitones)
+   - Recurring melodic motifs
 
-   - Markov chains pour contours mélodiques
-   - Contraintes d'intervalles (pas de sauts > 7 demi-tons)
-   - Motifs mélodiques récurrents
-
-2. **Harmonie enrichie:**
-
-   - Extensions d'accords (9èmes, 11èmes, 13èmes, alterations)
-   - Voice leading intelligent
+2. **Enhanced Harmony:**
+   - Chord extensions (9ths, 11ths, 13ths, alterations)
+   - Intelligent voice leading
    - Modulations/pivot chords
 
-3. **Structure compositionnelle:**
+3. **Compositional Structure:**
+   - A-B-A-C sections (verse/chorus)
+   - Builds and drops
+   - Dynamic intensity variation
 
-   - Sections A-B-A-C (couplet/refrain)
-   - Builds et drops
-   - Variation d'intensité dynamique
-
-4. **Effets génératifs:**
-
+4. **Generative Effects:**
    - Granular synthesis
    - Spectral processing
-   - Probabilités de glitches/silences
+   - Glitch/silence probabilities
 
-5. **Export/Sauvegarde:**
-   - Export MIDI
-   - Export audio (WAV/MP3)
-   - Sérialisation du state pour replay exact
+5. **Export/Save:**
+   - MIDI export
+   - Audio export (WAV/MP3)
+   - State serialization for exact replay
 
 ---
 
-## 📝 Notes Importantes
+## 📝 Important Notes
 
-- **Transport obligatoire:** Tout le séquençage repose sur `Tone.Transport`
-- **User gesture:** `Tone.start()` doit être appelé suite à une interaction utilisateur
-- **Précision timing:** Utiliser `time` parameter dans callbacks, jamais `Tone.now()`
-- **Masques binaires:** `MASK_MELODY = 31` pour wrap efficace (beatIndex & 31)
-- **Freeze mode:** Possibilité de geler toutes mutations/variations via flag global
+- **Transport Required:** All sequencing relies on `Tone.Transport`
+- **User Gesture:** `Tone.start()` must be called after user interaction
+- **Timing Precision:** Use `time` parameter in callbacks, never `Tone.now()`
+- **Binary Masks:** `MASK_MELODY = 31` for efficient wrapping (beatIndex & 31)
+- **Freeze Mode:** Ability to freeze all mutations/variations via global flag
 
 ---
 
 ## 🐛 Debugging
 
 ```javascript
-// Activer logs détaillés
+// Enable detailed logs
 const DEBUG_MUTABLE = true;
 
-// Inspecter state
+// Inspect state
 console.log({
   beatIndex,
   chordIndex,
@@ -544,26 +517,7 @@ console.log({
   peakLevel: audioGraph.meter.getValue(),
 });
 
-// Forcer régénération
+// Force regeneration
 arpegioMotifManager.forceRegenerate(0.6);
 regenerateInstruments();
 ```
-
----
-
-## ✅ Checklist Migration Nouveau Projet
-
-- [ ] Copier tous les fichiers `audio/`, `theory/`, `rhythm/`, `utils/`
-- [ ] Créer `core/musicEngine.js` avec logique d'orchestration
-- [ ] Installer dépendances: `npm install tone tonal`
-- [ ] Implémenter user gesture pour `Tone.start()`
-- [ ] Tester chaque instrument individuellement
-- [ ] Configurer BPM et intervalles selon besoins
-- [ ] Activer/désactiver parameter drift selon goût
-- [ ] Optionnel: ajouter UI controls (sliders, buttons)
-
----
-
-**Date de création:** 10 Décembre 2025  
-**Version système:** POC → Production Ready  
-**Maintenu par:** Migration depuis projet visualizer
