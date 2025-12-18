@@ -1,0 +1,28 @@
+{
+    "name": "music-generation-engine",
+    "version": "1.0.0",
+    "description": "Moteur de génération musicale algorithmique - Extrait du projet visualizer POC",
+    "type": "module",
+    "main": "core/musicEngine.js",
+    "scripts": {
+        "start": "vite",
+        "build": "vite build",
+        "preview": "vite preview"
+    },
+    "keywords": [
+        "generative-music",
+        "algorithmic-composition",
+        "tone.js",
+        "music-theory",
+        "web-audio"
+    ],
+    "author": "",
+    "license": "MIT",
+    "dependencies": {
+        "tone": "^14.8.49",
+        "tonal": "^6.3.0"
+    },
+    "devDependencies": {
+        "vite": "^5.0.0"
+    }
+}
