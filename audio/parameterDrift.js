@@ -55,7 +55,7 @@ export function createParameterDrift(opts) {
       const nowVal = t.getter();
       const firstTarget = clamp(pickRange(t.range), t.range[0], t.range[1]);
       t.currentTarget = firstTarget;
-      const rampM = 100.5;
+      const rampM = 100;
       const durSec = rampM * (60 / getTransport().bpm.value) * 4;
       try {
         t.apply(firstTarget, durSec);

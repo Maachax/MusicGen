@@ -313,7 +313,7 @@ export function createMusicEngine(config = {}) {
   } = config;
 
   // State
-  let beatIndex = 0;
+  let beatIndex = -1;
   let chordIndex = 0;
   let loopIndex = 1;
 

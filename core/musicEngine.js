@@ -84,7 +84,7 @@ export function createMusicEngine(config = {}) {
   // ========================
   // STATE GLOBAL
   // ========================
-  let beatIndex = 0; // 0..31 (haute résolution)
+  let beatIndex = -1; // 0..31 (haute résolution)
   let midLineProgressionPosition = 0;
   let chordIndex = 0;
   let loopIndex = 1;
@@ -251,7 +251,7 @@ export function createMusicEngine(config = {}) {
     regenerateAllPatterns();
 
     // Reset indices
-    beatIndex = 0;
+    beatIndex = -1;
     midLineProgressionPosition = 0;
     chordIndex = 0;
     loopIndex = 1;
