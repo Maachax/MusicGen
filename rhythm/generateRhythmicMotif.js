@@ -51,7 +51,8 @@ export function generateRhythmicMotif(
   }
   // Remove notes if too dense; prefer removing non strong beats
   if (motif.length > target) {
-    const strong = new Set([0, 4, 8, 12]);
+    // Strong beats derived from grid size (quarter positions of the cycle)
+    const strong = new Set([0, steps >> 2, steps >> 1, (3 * steps) >> 2]);
     while (motif.length > target) {
       const removable = motif.filter(
         (p) => !(protectStrongBeats && strong.has(p))

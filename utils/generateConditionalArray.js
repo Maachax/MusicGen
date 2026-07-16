@@ -5,7 +5,6 @@ function generateConditionalArray(length, probability, valueFunction) {
       playSequence.push(valueFunction(i));
     }
   }
-  console.log(playSequence);
   return playSequence;
 }
 

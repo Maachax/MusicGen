@@ -55,7 +55,7 @@ export function createParameterDrift(opts) {
       const nowVal = t.getter();
       const firstTarget = clamp(pickRange(t.range), t.range[0], t.range[1]);
       t.currentTarget = firstTarget;
-      const rampM = 100;
+      const rampM = 0.5;
       const durSec = rampM * (60 / getTransport().bpm.value) * 4;
       try {
         t.apply(firstTarget, durSec);
@@ -121,14 +121,14 @@ export function createParameterDrift(opts) {
     if (started) return api;
     started = true;
     // Schedule per measure
-    scheduledId = Tone.Transport.scheduleRepeat(() => tick(), "1m");
+    scheduledId = getTransport().scheduleRepeat(() => tick(), "1m");
     log("started");
     return api;
   }
 
   function stop() {
     if (!started) return api;
-    if (scheduledId != null) Tone.Transport.clear(scheduledId);
+    if (scheduledId != null) getTransport().clear(scheduledId);
     scheduledId = null;
     started = false;
     log("stopped");

@@ -6,24 +6,10 @@
  */
 
 import * as Tone from "tone";
-import {
-  initAudioTransport,
-  audioGraph,
-  setReverbDepth,
-  setGlobalHeadroom,
-  getCurrentHeadroomDb,
-} from "../audio/engine.js";
-import {
-  bassLineSynth,
-  subBassSynth,
-  midLineSynth,
-  midLineSynth2,
-  arpegioSynth,
-  chordSynth,
-  regenerateInstruments,
-  setSubBassLevel,
-} from "../audio/synths.js";
+import { initAudioTransport, createAudioGraph } from "../audio/engine.js";
+import { createSynths } from "../audio/synths.js";
 import { createParameterDrift } from "../audio/parameterDrift.js";
+import { setDebugLogging } from "../utils/log.js";
 import { getRandomScale } from "../theory/randomScale.js";
 import { getChordProgression } from "../theory/chords.js";
 import { createMotifManager } from "../rhythm/generateRhythmicMotif.js";
@@ -47,14 +33,26 @@ export function createMusicEngine(config = {}) {
   } = config;
 
   let DEBUG_MUTABLE = debug;
+  setDebugLogging(debug);
   const debugLog = (...args) => {
     if (DEBUG_MUTABLE) console.log("[MusicEngine]", ...args);
   };
 
+  // Graphe audio + instruments (construits ici, pas à l'import des modules)
+  const audioGraph = createAudioGraph();
+  const {
+    bassLineSynth,
+    subBassSynth,
+    midLineSynth,
+    midLineSynth2,
+    arpegioSynth,
+    regenerateInstruments,
+    setSubBassLevel,
+  } = createSynths(audioGraph);
+
   // Résolution mélodique
   const MELODY_LENGTH = BASE_MELODY_STEPS * SUBDIV_FACTOR; // 32
   const MID_LENGTH = 8;
-  const STEP_DURATION_SECONDS = Tone.Time("16n").toSeconds();
 
   // Masques binaires pour wrap efficace
   const MASK_MELODY = MELODY_LENGTH - 1; // 31
@@ -66,8 +64,8 @@ export function createMusicEngine(config = {}) {
   const PROG_INTERVAL = 256 * SUBDIV_FACTOR; // 512 ticks
 
   // Humanisation (micro-timing)
-  const HUMANIZE_MIN_MS = 0.005; // 5ms
-  const HUMANIZE_MAX_MS = 0.035; // 35ms
+  const HUMANIZE_MIN_SEC = 0.005; // 5ms
+  const HUMANIZE_MAX_SEC = 0.035; // 35ms
   let humanizeEnabled = humanize;
   let arpQuantize16 = true; // Force arpège sur grille 16e
 
@@ -75,10 +73,11 @@ export function createMusicEngine(config = {}) {
     if (!humanizeEnabled) return time;
     const r = Math.random() * 2 - 1;
     const mag =
-      HUMANIZE_MIN_MS +
-      (HUMANIZE_MAX_MS - HUMANIZE_MIN_MS) * Math.random() ** 2;
-    const delta = r * mag;
-    return delta < 0 ? time : time + delta;
+      HUMANIZE_MIN_SEC +
+      (HUMANIZE_MAX_SEC - HUMANIZE_MIN_SEC) * Math.random() ** 2;
+    // Décalage symétrique: le lookAhead du contexte (~100ms) garantit que
+    // time - HUMANIZE_MAX_SEC reste dans le futur au moment du scheduling.
+    return time + r * mag;
   }
 
   // ========================
@@ -94,10 +93,9 @@ export function createMusicEngine(config = {}) {
   let isBassPlay = true;
   let isMidlinePlay = true;
   let isArpegioPlay = true;
-  let isChordsPlay = false;
 
   function anyInstrumentActive() {
-    return isBassPlay || isMidlinePlay || isArpegioPlay || isChordsPlay;
+    return isBassPlay || isMidlinePlay || isArpegioPlay;
   }
 
   // ========================
@@ -117,7 +115,7 @@ export function createMusicEngine(config = {}) {
       const arr = src[i];
       for (let j = 0; j < arr.length; j++) out[k++] = arr[j];
     }
-    console.log(out, "melody notes generated");
+    debugLog("Melody notes generated:", out);
     return out;
   }
 
@@ -349,7 +347,8 @@ export function createMusicEngine(config = {}) {
                 : 1,
               1
             );
-            const sustainSeconds = durationSteps * STEP_DURATION_SECONDS;
+            // Recalculé à chaque déclenchement pour suivre les changements de BPM
+            const sustainSeconds = durationSteps * Tone.Time("16n").toSeconds();
             arpegioSynth.triggerAttackRelease(
               `${note}4`,
               sustainSeconds,
@@ -372,7 +371,7 @@ export function createMusicEngine(config = {}) {
         "Peak:",
         level.toFixed(1),
         "dBFS | Headroom:",
-        getCurrentHeadroomDb().toFixed(1),
+        audioGraph.getCurrentHeadroomDb().toFixed(1),
         "dB"
       );
     }
@@ -387,8 +386,8 @@ export function createMusicEngine(config = {}) {
   function initialize() {
     initAudioTransport();
     Tone.getTransport().bpm.value = bpm;
-    setGlobalHeadroom(globalHeadroom);
-    setReverbDepth(reverbDepth);
+    audioGraph.setGlobalHeadroom(globalHeadroom);
+    audioGraph.setReverbDepth(reverbDepth);
     initParameterDrift();
     debugLog("Music engine initialized at", bpm, "BPM");
   }
@@ -504,9 +503,6 @@ export function createMusicEngine(config = {}) {
         case "arp":
           isArpegioPlay = state !== null ? state : !isArpegioPlay;
           break;
-        case "chords":
-          isChordsPlay = state !== null ? state : !isChordsPlay;
-          break;
         default:
           console.warn("[MusicEngine] Unknown instrument:", name);
       }
@@ -514,16 +510,15 @@ export function createMusicEngine(config = {}) {
         bass: isBassPlay,
         midline: isMidlinePlay,
         arp: isArpegioPlay,
-        chords: isChordsPlay,
       });
-      return { isBassPlay, isMidlinePlay, isArpegioPlay, isChordsPlay };
+      return { isBassPlay, isMidlinePlay, isArpegioPlay };
     },
 
     /**
      * Obtient l'état des instruments
      */
     getInstrumentStates() {
-      return { isBassPlay, isMidlinePlay, isArpegioPlay, isChordsPlay };
+      return { isBassPlay, isMidlinePlay, isArpegioPlay };
     },
 
     /**
@@ -555,7 +550,7 @@ export function createMusicEngine(config = {}) {
      * Configure le headroom global (dB)
      */
     setHeadroom(db) {
-      setGlobalHeadroom(db);
+      audioGraph.setGlobalHeadroom(db);
       debugLog("Headroom:", db, "dB");
     },
 
@@ -563,8 +558,16 @@ export function createMusicEngine(config = {}) {
      * Configure la profondeur de reverb
      */
     setReverb(depth) {
-      setReverbDepth(depth);
+      audioGraph.setReverbDepth(depth);
       debugLog("Reverb depth:", depth);
+    },
+
+    /**
+     * Configure le niveau du sub-bass (dB)
+     */
+    setSubBassLevel(db) {
+      setSubBassLevel(db);
+      debugLog("Sub-bass level:", db, "dB");
     },
 
     /**
@@ -584,6 +587,7 @@ export function createMusicEngine(config = {}) {
      */
     setDebug(enabled) {
       DEBUG_MUTABLE = enabled;
+      setDebugLogging(enabled);
       return DEBUG_MUTABLE;
     },
 
@@ -602,7 +606,6 @@ export function createMusicEngine(config = {}) {
           bass: isBassPlay,
           midline: isMidlinePlay,
           arp: isArpegioPlay,
-          chords: isChordsPlay,
         },
         arpMotif: arpegioMotifManager.getMotif
           ? arpegioMotifManager.getMotif()
@@ -611,7 +614,7 @@ export function createMusicEngine(config = {}) {
         humanizeEnabled,
         paramDriftEnabled,
         peakLevel: audioGraph.meter.getValue(),
-        headroom: getCurrentHeadroomDb(),
+        headroom: audioGraph.getCurrentHeadroomDb(),
       };
     },
 
@@ -625,7 +628,6 @@ export function createMusicEngine(config = {}) {
         midline: midLineSynth,
         midline2: midLineSynth2,
         arpegio: arpegioSynth,
-        chords: chordSynth,
       };
     },
 

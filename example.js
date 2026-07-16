@@ -89,9 +89,6 @@ function createSimpleUI() {
       </label><br>
       <label>
         <input type="checkbox" id="arp-toggle" checked> Arpegio
-      </label><br>
-      <label>
-        <input type="checkbox" id="chords-toggle"> Chords
       </label>
     </div>
     
@@ -150,10 +147,6 @@ function createSimpleUI() {
 
   document.getElementById("arp-toggle").addEventListener("change", (e) => {
     engine.toggleInstrument("arp", e.target.checked);
-  });
-
-  document.getElementById("chords-toggle").addEventListener("change", (e) => {
-    engine.toggleInstrument("chords", e.target.checked);
   });
 
   document.getElementById("density-slider").addEventListener("input", (e) => {

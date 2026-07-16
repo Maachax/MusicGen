@@ -1,4 +1,4 @@
-import { audioGraph } from "./engine";
+import { debugLog } from "../utils/log.js";
 
 // Pool élargi (pondérations simples). Clés = nom effet, val = poids de sélection.
 const EFFECT_POOL = {
@@ -46,7 +46,11 @@ export function pickEffectSubset(max = 2) {
 
 // Pour éviter empilements multiples, on mémorise les effets déjà attachés sur un synth donné.
 const __effectRegistry = new WeakMap();
-export function attachRandomEffects(synth, { max = 2 } = {}) {
+export function attachRandomEffects(synth, { max = 2, audioGraph } = {}) {
+  if (!audioGraph) {
+    console.warn("[attachRandomEffects] audioGraph requis, effets ignorés");
+    return;
+  }
   let attached = __effectRegistry.get(synth);
   if (!attached) {
     attached = new Set();
@@ -71,10 +75,5 @@ export function attachRandomEffects(synth, { max = 2 } = {}) {
       attached.add(name);
     }
   });
-  console.log("Attached effects (new):", chosen, "total now", attached);
-}
-
-// Maintien compat (si ancien code appelle getRandomEffectChain)
-export function getRandomEffectChain() {
-  return [];
+  debugLog("Attached effects (new):", chosen, "total now", attached);
 }
